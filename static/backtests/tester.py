@@ -1,17 +1,43 @@
 # run_detailed_backtest.py
+import json
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from typing import Any
 
 
-def run_detailed_backtest(env_class, model, df: pd.DataFrame, pair_name: str, risk_level: float) -> dict[str, Any]:
+def _to_serializable(o):
+    """Helper to make numpy/pandas types JSON-serializable."""
+    if isinstance(o, (np.integer,)):
+        return int(o)
+    if isinstance(o, (np.floating,)):
+        return float(o)
+    if isinstance(o, (np.ndarray,)):
+        return o.tolist()
+    if isinstance(o, (pd.Timestamp,)):
+        return o.isoformat()
+    return str(o)
+
+
+def run_detailed_backtest(
+    env_class,
+    model,
+    df: pd.DataFrame,
+    pair_name: str,
+    risk_level: float,
+    test_output_folder_name: str | None = None
+) -> dict[str, Any]:
     """
     Env-agnostic backtest runner.
-    Expects env.reset() -> (obs, info) and env.step(a) -> (obs, reward, terminated, truncated, info).
-    Tries multiple fallbacks for initial balance and current step.
+    Saves artifacts under results/<folder>/ where <folder> is test_output_folder_name or pair_name.
     """
-    # You can tweak this default if you pass a different one to the env below
+    # ---------- Paths ----------
+    # If the caller passes a folder name use it; otherwise default to pair_name
+    folder_name = test_output_folder_name or pair_name
+    out_dir = Path("static/backtest_results") / folder_name
+    out_dir.mkdir(parents=True, exist_ok=True)
+
     default_initial_balance = 1000.0
 
     # Instantiate env — keep kwargs that your env actually supports
@@ -32,7 +58,6 @@ def run_detailed_backtest(env_class, model, df: pd.DataFrame, pair_name: str, ri
     if isinstance(df.index, pd.DatetimeIndex):
         first_ts = df.index[min(current_step, len(df) - 1)]
     else:
-        # If index is not datetime, convert later; or coerce to datetime here
         first_ts = pd.to_datetime(df.index[min(current_step, len(df) - 1)])
 
     done = False
@@ -45,21 +70,19 @@ def run_detailed_backtest(env_class, model, df: pd.DataFrame, pair_name: str, ri
         action, _states = model.predict(obs, deterministic=True)
         obs, reward, done, truncated, info = env.step(action)
 
-        # Update current_step fallback each loop
         current_step = getattr(env, "current_step", current_step + 1)
         idx = min(current_step, len(df) - 1)
         ts = df.index[idx]
         if not isinstance(ts, pd.Timestamp):
             ts = pd.to_datetime(ts)
 
-        # Track balance; fall back to last known if missing
         balance = info.get("balance", balance_history[-1])
         balance_history.append(float(balance))
         date_history.append(ts)
 
         # Closed trade details enrichment
         if info.get("closed_trade"):
-            trade = dict(info["closed_trade"])  # copy
+            trade = dict(info["closed_trade"])  # shallow copy
             for key in (
                 "balance",
                 "total_trades",
@@ -70,7 +93,8 @@ def run_detailed_backtest(env_class, model, df: pd.DataFrame, pair_name: str, ri
             ):
                 if key in info:
                     trade[key] = info[key]
-            trade["timestamp"] = str(ts)
+            trade["timestamp"] = ts.isoformat()
+            trade["pair"] = pair_name
             trade_log.append(trade)
 
     # --- Metrics ---
@@ -138,32 +162,59 @@ def run_detailed_backtest(env_class, model, df: pd.DataFrame, pair_name: str, ri
     print(f"En Büyük Zarar:        ${max_loss:,.2f}")
     print("-" * 50)
 
-    # Save artifacts
-    trade_log_df = pd.DataFrame(trade_log)
-    log_filename = f"trade_log_{pair_name}.txt"
-    trade_log_df.to_csv(log_filename, sep="\t", index=False)
-    print(f"Tüm işlemlerin detaylı kaydı '{log_filename}' adıyla kaydedildi.")
+    # ---------- Save artifacts ----------
+    # 1) Trades as JSON
+    trades_path = out_dir / "trades.json"
+    with trades_path.open("w", encoding="utf-8") as f:
+        json.dump(trade_log, f, ensure_ascii=False, indent=2, default=_to_serializable)
+    print(f"Tüm işlemlerin JSON kaydı: '{trades_path.as_posix()}'")
 
+    # 2) Metrics as JSON
+    metrics = {
+        "pair": pair_name,
+        "risk_level": risk_level,
+        "start_balance": float(equity_curve.iloc[0]),
+        "end_balance": float(equity_curve.iloc[-1]),
+        "total_profit": total_profit,
+        "total_profit_percent": total_profit_percent,
+        "sharpe": sharpe,
+        "max_drawdown_percent": max_dd,
+        "profit_factor": profit_factor,
+        "buy_win_rate": buy_win_rate,
+        "sell_win_rate": sell_win_rate,
+        "total_trades": len(trade_log),
+    }
+    metrics_path = out_dir / "metrics.json"
+    with metrics_path.open("w", encoding="utf-8") as f:
+        json.dump(metrics, f, ensure_ascii=False, indent=2, default=_to_serializable)
+    print(f"Metrix JSON kaydı: '{metrics_path.as_posix()}'")
+
+    used_data_path = out_dir / "used_data.json"
+    with used_data_path.open("w", encoding="utf-8") as f:
+        json.dump(df.reset_index().to_dict(orient="records"), f, ensure_ascii=False, indent=2, default=_to_serializable)
+
+    # 3) Equity curve PNG
     chart_filename = f"equity_curve_{pair_name}_risk_{int(risk_level*100)}p.png"
+    chart_path = out_dir / chart_filename
     plt.figure(figsize=(15, 7))
     plt.plot(equity_curve.index, equity_curve.values)
     plt.title(f'Bakiye Değişim Grafiği ({pair_name} - Risk %{risk_level*100:.0f})')
     plt.xlabel("Tarih")
     plt.ylabel("Bakiye ($)")
     plt.grid(True)
-    plt.savefig(chart_filename)
-    print(f"Bakiye değişim grafiği '{chart_filename}' adıyla kaydedildi.")
+    plt.tight_layout()
+    plt.savefig(chart_path.as_posix())
+    plt.close()
+    print(f"Bakiye değişim grafiği: '{chart_path.as_posix()}'")
 
     return {
         "equity_curve": equity_curve,
-        "trade_log": trade_log_df,
-        "metrics": {
-            "total_profit": total_profit,
-            "total_profit_percent": total_profit_percent,
-            "sharpe": sharpe,
-            "max_dd": max_dd,
-            "profit_factor": profit_factor,
-            "buy_win_rate": buy_win_rate,
-            "sell_win_rate": sell_win_rate,
+        "trade_log": pd.DataFrame(trade_log),
+        "metrics": metrics,
+        "artifacts": {
+            "folder": out_dir.as_posix(),
+            "trades_json": trades_path.as_posix(),
+            "metrics_json": metrics_path.as_posix(),
+            "equity_curve_png": chart_path.as_posix(),
         },
     }

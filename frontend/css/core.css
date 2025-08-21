@@ -1,10 +1,29 @@
-.main-container{
+.main-container {
     margin-left: 5%;
     margin-right: 5%;
     height: calc(100% - 80px);
 }
 
 
-html, body{
+html,
+body {
     height: 100%;
+}
+
+
+#priceChart {
+    height: 600px;
+}
+
+.toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin: 10px 0;
+}
+
+.status {
+    margin-left: auto;
+    font-size: 12px;
+    opacity: .8;
 }

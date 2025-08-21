@@ -41,6 +41,7 @@ def test_agent():
     data_filename = data.get("dataFile")
     agent_name = data.get("agentFile")
     backtest_filname = data.get("backtestFile")
+    test_output_folder_name = data_filename + '-' + agent_name.replace('\\', '~') + '-' + backtest_filname
     
     if not data_filename or not agent_name:
         return jsonify({"error": "Missing files"}), 400
@@ -60,7 +61,8 @@ def test_agent():
         run_dir= agent_name,
         data_filename=data_filename,
         data_dir="static\\historical_data\\" + symbol,
-        backtest_fn=backtest_fn
+        backtest_fn=backtest_fn,
+        test_output_folder_name=test_output_folder_name
     )
 
 

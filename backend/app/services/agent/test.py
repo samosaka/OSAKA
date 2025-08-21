@@ -12,6 +12,7 @@ def test_model(
     data_filename: str,
     data_dir: str = "data",
     backtest_fn: Callable = None,   # your existing function, e.g., run_detailed_backtest
+    test_output_folder_name: str,
 ) -> Dict:
     """
     Test a trained run against new data using the archived strategy.py.
@@ -61,7 +62,8 @@ def test_model(
         model=model,
         df=df_final,
         pair_name=meta["symbol"],
-        risk_level=meta["config"].get("risk_percentage", 0.02)
+        risk_level=meta["config"].get("risk_percentage", 0.02),
+        test_output_folder_name=test_output_folder_name
     )
 
     return {"ok": True, "run_dir": run_dir, "meta": meta, "result": result}

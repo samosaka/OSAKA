@@ -3,6 +3,7 @@ import json
 from datetime import datetime
 agents_root_dir = "./static/agents"
 backtests_root_dir = "./static/backtests"
+training_result_root_dir = "./static/backtest_results"
 
 def get_timestamps(path):
     stat = os.stat(path)
@@ -47,6 +48,26 @@ def get_backtests():
     for filename in sorted(os.listdir(backtests_root_dir)):
         if filename.endswith(".py"):
             file_path = os.path.join(backtests_root_dir, filename)
+            timestamps = get_timestamps(file_path)
+
+            data.append({
+                "id": filename,
+                "parentId": None,
+                "name": filename,
+                "type": "file",
+                **timestamps
+            })
+
+    return data
+
+
+
+
+def get_training_results():
+    data = []
+
+    for filename in sorted(os.listdir(training_result_root_dir)):
+            file_path = os.path.join(training_result_root_dir, filename)
             timestamps = get_timestamps(file_path)
 
             data.append({

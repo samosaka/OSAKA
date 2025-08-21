@@ -24,6 +24,10 @@ app.config(function($routeProvider) {
       templateUrl: "js/views/contact.html",
       controller: "ContactCtrl"
     })
+     .when("/analyze", {
+      templateUrl: "js/views/analyze.html",
+      controller: "AnalyzeCtrl"
+    })
     .otherwise({ redirectTo: "/" });
 });
 

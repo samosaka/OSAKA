@@ -1,0 +1,14 @@
+{
+  "pair": "EURCHF",
+  "risk_level": 0.02,
+  "start_balance": 1000.0,
+  "end_balance": 860.9560151816377,
+  "total_profit": -139.04398481836233,
+  "total_profit_percent": -13.904398481836234,
+  "sharpe": -0.318763613176255,
+  "max_drawdown_percent": -16.625223786985007,
+  "profit_factor": 0.6394129922465767,
+  "buy_win_rate": 0.25925925925925924,
+  "sell_win_rate": 0.0,
+  "total_trades": 28
+}

@@ -1,0 +1,29 @@
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-md-12">
+      <h5>📂 Select Test Result</h5>
+      <div id="testResults"></div>
+    </div>
+  </div>
+
+  <div class="text-center mt-4">
+    <div id="analyzeButton"></div>
+    <p id="serverStatus" class="mt-3 text-primary"></p>
+  </div>
+
+
+
+
+  <div class="toolbar">
+    <input type="text" ng-model="folder" placeholder="results folder (e.g. EURCHF_test1)" style="width:280px;">
+    <button class="dx-button dx-button-mode-contained dx-button-normal" ng-click="load()">Load</button>
+
+    <label><input type="checkbox" ng-model="showEntries" ng-change="rebuildSeries()"> Entries</label>
+    <label><input type="checkbox" ng-model="showExits" ng-change="rebuildSeries()"> Exits</label>
+
+    <div class="status" ng-if="loading">Loading…</div>
+    <div class="status" ng-if="error" style="color:#e74c3c;">{{error}}</div>
+  </div>
+
+  <div id="priceChart"></div>
+</div>
