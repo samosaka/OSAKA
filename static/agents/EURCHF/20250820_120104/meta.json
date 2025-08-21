@@ -1,0 +1,21 @@
+{
+  "run_id": "20250820_120104",
+  "symbol": "EURCHF",
+  "config": {
+    "symbol": "EURCHF",
+    "window_size": 50,
+    "risk_percentage": 0.02,
+    "reward_ratio": 2.0,
+    "timezone": "Europe/Istanbul",
+    "seed": 42
+  },
+  "strategy_name": "strategy_example.py",
+  "strategy_filename": "strategy.py",
+  "strategy_sha256": "737750e3f2adf85430e7fb256d2ec4640b375d4c935998e95c06ec917706cb44",
+  "data_source": "C:\\Code\\Sandbox\\OSAKA\\static\\historical_data\\EURCHF\\EURCHF_W1_343.json",
+  "lib_versions": {
+    "stable_baselines3": ">=2.3.0",
+    "gymnasium": ">=0.29"
+  },
+  "train_steps": 300000
+}
